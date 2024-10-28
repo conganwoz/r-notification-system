@@ -104,20 +104,22 @@ class NotificationSystem extends React.Component {
 
   _didNotificationRemoved(uid) {
     var notification;
-    var notifications = this.state.notifications.filter(function(toCheck) {
-      if (toCheck.uid === uid) {
-        notification = toCheck;
-        return false;
-      }
-      return true;
-    });
-
     if (this._isMounted) {
-      this.setState({ notifications: notifications });
-    }
+      this.setState(prevState => {
+        var notifications = prevState.notifications.filter(function(toCheck) {
+          if (toCheck.uid === uid) {
+            notification = toCheck;
+            return false;
+          }
+          return true;
+        });
 
-    if (notification && notification.onRemove) {
-      notification.onRemove(notification);
+        return { notifications };
+      }, () => {
+        if (notification && notification.onRemove) {
+          notification.onRemove(notification);
+        }
+      });
     }
   }
 
@@ -163,19 +165,16 @@ class NotificationSystem extends React.Component {
       }
     }
 
-    if (this.props.newOnTop) {
-      notifications.unshift(_notification);
-    } else {
-      notifications.push(_notification);
-    }
-
-
-    if (typeof _notification.onAdd === 'function') {
-      notification.onAdd(_notification);
-    }
-
-    this.setState({
-      notifications: notifications
+    this.setState(prevState => {
+      const otherNotifications = prevState.notifications.filter(item => item.uid !== _notification.uid);
+      return {
+        notifications:
+          this.props.newOnTop ? [_notification].concat(otherNotifications) : otherNotifications.concat([_notification])
+      };
+    }, () => {
+      if (typeof _notification.onAdd === 'function') {
+        notification.onAdd(_notification);
+      }
     });
 
     return _notification;
